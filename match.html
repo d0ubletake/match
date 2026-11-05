@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>다각형 짝 맞추기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#dcefe9; --panel:#f6fbf9; --ink:#22303a; --muted:#51636d;
+  --stone:#a9b0b8; --stone-d:#7d858f; --ok:#2a9d6f; --gold:#f4c430; --line:#bcd6cd; --back:#8f98a1;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16232a; --panel:#1f313a; --ink:#e8f1f0; --muted:#a7bbc2;
+    --stone:#8b939c; --stone-d:#c3cad1; --ok:#4cc38f; --gold:#e5b400; --line:#34505b; --back:#4a5963; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16232a; --panel:#1f313a; --ink:#e8f1f0; --muted:#a7bbc2;
+  --stone:#8b939c; --stone-d:#c3cad1; --ok:#4cc38f; --gold:#e5b400; --line:#34505b; --back:#4a5963; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:18px;line-height:1.5;min-height:100vh}
+main{max-width:600px;margin:0 auto;padding:14px 12px 28px}
+h1{font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-weight:400;font-size:1.9rem;margin:2px 0 2px}
+.sub{margin:0 0 10px;color:var(--muted);font-size:.95rem}
+.board{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chip{background:var(--panel);border:3px solid var(--line);border-radius:16px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-family:"Jua",sans-serif;font-size:1.2rem;transition:background .2s,border-color .2s}
+.chip small{font-family:"Gowun Dodum",sans-serif;font-size:.85rem;color:var(--muted)}
+.chip.active{background:var(--gold);border-color:var(--ink)}
+.chip.active small{color:var(--ink)}
+.rd{display:flex;justify-content:space-between;margin:10px 4px 8px;color:var(--muted);font-size:.95rem}
+.rd b{color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;perspective:900px}
+.card{position:relative;aspect-ratio:1/1.08;border:0;padding:0;background:none;cursor:pointer;font:inherit}
+.card:focus-visible{outline:3px solid var(--ink);outline-offset:2px;border-radius:12px}
+.in{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .4s}
+.card.up .in{transform:rotateY(180deg)}
+.f{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:grid;place-items:center;border:2px solid var(--ink)}
+.back{background:var(--back);color:var(--panel);font-family:"Jua",sans-serif;font-size:1.8rem}
+.front{background:var(--panel);transform:rotateY(180deg);padding:4px}
+.card.done .front{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 16%,var(--panel))}
+.front svg{width:100%;height:100%;overflow:visible}
+.front svg *{fill:var(--stone);stroke:var(--stone-d);stroke-width:3;stroke-linejoin:round}
+.front .nm{font-family:"Jua","Apple SD Gothic Neo",sans-serif;font-size:1.15rem;line-height:1.2;text-align:center;word-break:keep-all}
+.msg{min-height:3.4em;margin:12px 4px 0;font-size:1rem}
+.msg.good{color:var(--ok)}
+.panel{display:none;background:var(--panel);border:3px solid var(--ink);border-radius:20px;padding:18px;margin-top:14px;text-align:center}
+.panel.show{display:block}
+.panel h2{font-family:"Jua",sans-serif;font-weight:400;font-size:1.8rem;margin:0 0 6px}
+.panel p{margin:4px 0 12px}
+button.main{font:inherit;font-family:"Jua",sans-serif;font-size:1.1rem;background:var(--ink);color:var(--panel);border:0;border-radius:14px;padding:10px 22px;cursor:pointer}
+button.main:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+@media (max-width:380px){.front .nm{font-size:.98rem}}
+@media (prefers-reduced-motion:reduce){.in{transition:none}.chip{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>다각형 짝 맞추기</h1>
+  <p class="sub">도형 카드와 이름 카드를 한 쌍으로 맞혀요. 짝이 맞으면 한 번 더, 틀리면 짝에게 넘겨요.</p>
+  <div class="board">
+    <div class="chip" id="c0"><span>짝 1</span><span><b id="s0">0</b>쌍 <small id="r0"></small></span></div>
+    <div class="chip" id="c1"><span>짝 2</span><span><b id="s1">0</b>쌍 <small id="r1"></small></span></div>
+  </div>
+  <div class="rd"><span>라운드 <b id="rn">1</b> / 3</span><span id="turn"></span></div>
+  <div class="grid" id="grid"></div>
+  <div class="msg" id="msg" aria-live="polite"></div>
+  <div class="panel" id="panel" aria-live="polite">
+    <h2 id="ph"></h2>
+    <p id="pt"></p>
+    <button class="main" id="pb" type="button"></button>
+  </div>
+</main>
+<script>
+var NAMES={3:"삼각형",4:"사각형",5:"오각형",6:"육각형",7:"칠각형",8:"팔각형",9:"구각형",10:"십각형","none":"다각형 아님"};
+var POLY=[3,4,5,6,7,8,9,10];
+var total,rs,round,turn,cards,open,lock,matched,pairs;
+function rnd(a,b){return a+Math.random()*(b-a)}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function shapeSvg(n){
+  if(n==="none")return noneSvg();
+  var off=rnd(0,6.28),p=[];
+  for(var i=0;i<n;i++){
+    var a=off+(i+rnd(-.14,.14))/n*6.2832,r=rnd(34,44);
+    p.push((50+r*Math.cos(a)).toFixed(1)+","+(50+r*Math.sin(a)).toFixed(1));
+  }
+  return '<svg viewBox="0 0 100 100" aria-hidden="true"><polygon points="'+p.join(" ")+'"/></svg>';
+}
+function noneSvg(){
+  var k=Math.floor(Math.random()*5),inner;
+  if(k===0)inner='<circle cx="50" cy="50" r="38"/>';
+  else if(k===1)inner='<ellipse cx="50" cy="50" rx="43" ry="28"/>';
+  else if(k===2)inner='<path d="M10 68 A40 40 0 0 1 90 68 Z"/>';
+  else if(k===3)inner='<path d="M20 86 V46 A30 30 0 0 1 80 46 V86 Z"/>';
+  else{
+    var m=pick([4,5,6]),q=[];
+    for(var i=0;i<=m;i++){var a=i/(m+1)*6.2832;q.push((50+40*Math.cos(a)).toFixed(1)+","+(50+40*Math.sin(a)).toFixed(1))}
+    inner='<polyline points="'+q.join(" ")+'"/>';
+  }
+  return '<svg viewBox="0 0 100 100" aria-hidden="true"><g transform="rotate('+Math.round(rnd(0,360))+' 50 50)">'+inner+'</g></svg>';
+}
+function kindsFor(r){
+  if(r===1)return POLY.slice();
+  var k=shuffle(POLY.slice()).slice(0,7);k.push("none");return k;
+}
+function newMatch(){total=[0,0];startRound(1)}
+function startRound(r){
+  round=r;rs=[0,0];turn=(r-1)%2;open=[];lock=false;matched=0;
+  var kinds=kindsFor(r);pairs=kinds.length;cards=[];
+  kinds.forEach(function(k){
+    cards.push({kind:k,type:"shape"});cards.push({kind:k,type:"name"});
+  });
+  shuffle(cards);
+  var g=document.getElementById("grid");g.innerHTML="";
+  cards.forEach(function(c,i){
+    c.svg=c.type==="shape"?shapeSvg(c.kind):null;
+    var el=document.createElement("button");
+    el.type="button";el.className="card";el.setAttribute("aria-label","카드 "+(i+1)+"번");
+    var face=c.type==="shape"?c.svg:'<span class="nm">'+NAMES[c.kind]+'</span>';
+    el.innerHTML='<div class="in"><div class="f back">?</div><div class="f front">'+face+'</div></div>';
+    el.onclick=function(){flip(i)};
+    g.appendChild(el);
+  });
+  document.getElementById("panel").classList.remove("show");
+  document.getElementById("msg").textContent="";
+  document.getElementById("msg").className="msg";
+  render();
+}
+function render(){
+  var els=document.querySelectorAll(".card");
+  cards.forEach(function(c,i){
+    els[i].classList.toggle("up",!!c.done||open.indexOf(i)>=0);
+    els[i].classList.toggle("done",!!c.done);
+    els[i].setAttribute("aria-label","카드 "+(i+1)+"번"+((c.done||open.indexOf(i)>=0)?" "+(c.type==="shape"?"도형 카드":NAMES[c.kind]):""));
+  });
+  for(var p=0;p<2;p++){
+    document.getElementById("s"+p).textContent=total[p]+rs[p];
+    document.getElementById("r"+p).textContent="(이번 라운드 "+rs[p]+")";
+    document.getElementById("c"+p).classList.toggle("active",p===turn);
+  }
+  document.getElementById("rn").textContent=round;
+  document.getElementById("turn").textContent="짝 "+(turn+1)+"의 차례";
+}
+function flip(i){
+  if(lock)return;
+  var c=cards[i];
+  if(c.done||open.indexOf(i)>=0)return;
+  open.push(i);render();
+  if(open.length<2)return;
+  var a=cards[open[0]],b=cards[open[1]],msg=document.getElementById("msg");
+  lock=true;
+  if(a.kind===b.kind&&a.type!==b.type){
+    setTimeout(function(){
+      a.done=b.done=true;open=[];rs[turn]++;matched++;lock=false;
+      msg.className="msg good";
+      msg.textContent="짝이 맞아요! "+(a.kind==="none"?"이 도형은 다각형이 아니에요.":"변이 "+a.kind+"개인 "+NAMES[a.kind]+"이에요.")+" 한 번 더!";
+      render();
+      if(matched===pairs)endRound();
+    },700);
+  } else {
+    msg.className="msg";
+    msg.textContent="아쉬워요. 어디에 있었는지 기억해 두고 짝에게 넘겨요.";
+    setTimeout(function(){open=[];turn=1-turn;lock=false;render()},1300);
+  }
+}
+function endRound(){
+  total[0]+=rs[0];total[1]+=rs[1];
+  var pn=document.getElementById("panel"),h=document.getElementById("ph"),t=document.getElementById("pt"),b=document.getElementById("pb");
+  var lead=rs[0]===rs[1]?"이번 라운드는 무승부예요.":"이번 라운드는 짝 "+(rs[0]>rs[1]?1:2)+"이 이겼어요.";
+  if(round<3){
+    h.textContent="라운드 "+round+" 끝!";
+    t.textContent=lead+" 지금까지 짝 1은 "+total[0]+"쌍, 짝 2는 "+total[1]+"쌍이에요.";
+    b.textContent="라운드 "+(round+1)+" 시작";
+    b.onclick=function(){startRound(round+1)};
+  } else {
+    h.textContent=total[0]===total[1]?"최종 무승부!":"짝 "+(total[0]>total[1]?1:2)+" 우승!";
+    t.textContent="짝 1은 "+total[0]+"쌍, 짝 2는 "+total[1]+"쌍을 맞혔어요.";
+    b.textContent="처음부터 다시 하기";
+    b.onclick=newMatch;
+  }
+  for(var p=0;p<2;p++){document.getElementById("s"+p).textContent=total[p];document.getElementById("r"+p).textContent=""}
+  pn.classList.add("show");
+}
+newMatch();
+</script>
+</body>
+</html>
